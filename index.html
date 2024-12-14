@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuegos Artificiales con Nieve y Cuernos Ajustados</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="fireworksCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('fireworksCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Texto del mensaje (puedes cambiar esta variable)
+        let message = "Puta";
+
+        let fontSize = 5; // Tamaño inicial del texto
+        let rotation = 0; // Rotación inicial
+        let animationPhase = 0; // Control de fases del zoom
+
+        const particles = [];
+        const snowflakes = []; // Lista de copos de nieve
+
+        // Generar colores aleatorios
+        function randColor() {
+            return `hsl(${Math.random() * 360}, 100%, 70%)`;
+        }
+
+        // Clase para las partículas
+        class Particle {
+            constructor(x, y, color, velocityX, velocityY, life) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.velocityX = velocityX;
+                this.velocityY = velocityY;
+                this.alpha = 1;
+                this.life = life;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update() {
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+                this.velocityY += 0.05; // Gravedad
+                this.alpha -= 1 / this.life;
+            }
+        }
+
+        // Clase para los copos de nieve
+        class Snowflake {
+            constructor(x, y, radius, velocityY) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.velocityY = velocityY;
+            }
+
+            draw() {
+                ctx.globalAlpha = 0.8; // Transparencia para un efecto suave
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update() {
+                this.y += this.velocityY; // Movimiento hacia abajo
+                if (this.y > canvas.height) {
+                    this.y = -this.radius; // Reiniciar el copo arriba
+                    this.x = Math.random() * canvas.width; // Nueva posición horizontal
+                }
+            }
+        }
+
+        // Crear copos de nieve iniciales
+        function createSnowflakes(count) {
+            for (let i = 0; i < count; i++) {
+                const radius = Math.random() * 2 + 1; // Tamaño aleatorio
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const velocityY = Math.random() * 1 + 0.5; // Velocidad aleatoria
+                snowflakes.push(new Snowflake(x, y, radius, velocityY));
+            }
+        }
+
+        // Crear explosión de chispas
+        function createExplosion(x, y) {
+            const color = randColor();
+            for (let i = 0; i < 50; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3 + 2;
+                const velocityX = Math.cos(angle) * speed;
+                const velocityY = Math.sin(angle) * speed;
+                const life = Math.random() * 50 + 50;
+                particles.push(new Particle(x, y, color, velocityX, velocityY, life));
+            }
+        }
+
+        // Lanzar fuegos artificiales automáticamente
+        function launchFireworks() {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height * 0.5;
+            createExplosion(x, y);
+        }
+
+        // Dibujar cuerno ajustado
+        function drawAntler(x, y, scale, direction = "left") {
+            ctx.strokeStyle = "brown";
+            ctx.lineWidth = 3;
+
+            function drawBranch(startX, startY, cp1X, cp1Y, cp2X, cp2Y, endX, endY) {
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.bezierCurveTo(cp1X, cp1Y, cp2X, cp2Y, endX, endY);
+                ctx.stroke();
+            }
+
+            if (direction === "left") {
+                drawBranch(x, y, x - 30 * scale, y - 50 * scale, x - 60 * scale, y - 30 * scale, x - 80 * scale, y - 80 * scale);
+            } else {
+                drawBranch(x, y, x + 30 * scale, y - 50 * scale, x + 60 * scale, y - 30 * scale, x + 80 * scale, y - 80 * scale);
+            }
+        }
+
+        // Dibujar mensaje con cuernos dinámicos
+        function drawMessageWithAntlers() {
+            const messageWidth = ctx.measureText(message).width;
+
+            const xStart = canvas.width / 2 - messageWidth / 2; // Inicio del mensaje
+            const xEnd = canvas.width / 2 + messageWidth / 2; // Fin del mensaje
+
+            // Dibujar cuerno izquierdo
+            drawAntler(xStart - 20, canvas.height / 2 - 20, 1, "left");
+
+            // Dibujar mensaje
+            ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+
+            // Dibujar cuerno derecho
+            drawAntler(xEnd + 20, canvas.height / 2 - 20, 1, "right");
+        }
+
+        // Dibujar mensaje con efecto de zoom
+        function drawMessage() {
+            ctx.font = `${fontSize}px Times New Roman`;
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+
+            if (animationPhase === 2) {
+                drawMessageWithAntlers();
+                return;
+            }
+
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(rotation);
+            ctx.fillText(message, 0, 0);
+            ctx.restore();
+
+            if (animationPhase === 0) {
+                fontSize += 5;
+                rotation += Math.PI / 30;
+                if (fontSize >= canvas.height / 2) animationPhase = 1;
+            } else if (animationPhase === 1) {
+                fontSize -= 5;
+                rotation -= Math.PI / 30;
+                if (fontSize <= 60) {
+                    fontSize = 60;
+                    rotation = 0;
+                    animationPhase = 2;
+                }
+            }
+        }
+
+        // Animar canvas
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            snowflakes.forEach((flake) => {
+                flake.update();
+                flake.draw();
+            });
+
+            particles.forEach((particle, index) => {
+                if (particle.alpha <= 0) {
+                    particles.splice(index, 1);
+                } else {
+                    particle.update();
+                    particle.draw();
+                }
+            });
+
+            drawMessage();
+            requestAnimationFrame(animate);
+        }
+
+        // Iniciar explosiones y copos de nieve
+        setInterval(() => {
+            launchFireworks();
+        }, 150);
+
+        // Generar copos de nieve iniciales
+        createSnowflakes(100);
+
+        // Ajustar tamaño del canvas
+        window.addEventListener("resize", () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        animate();
+    </script>
+</body>
+</html>
